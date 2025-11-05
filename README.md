@@ -1,7 +1,7 @@
 # servidorSRVMatrixPlay
 
-- **RPi**
-  [appRPiMatrixPlay](https://github.com/monica438/appRPiMatrixPlay.git))
+- 🧩 **App Raspberry Pi**  
+  [appRPiMatrixPlay](https://github.com/monica438/appRPiMatrixPlay)
 
 - 🖥️ **App d'escriptori**  
   [appDesktopMatrixPlay](https://github.com/monica438/appDesktopMatrixPlay)
