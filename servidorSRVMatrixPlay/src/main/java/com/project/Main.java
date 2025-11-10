@@ -9,7 +9,6 @@ import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.json.JSONObject;
-import org.w3c.dom.html.HTMLOListElement;
 
 public class Main extends WebSocketServer {
 
@@ -68,6 +67,8 @@ public class Main extends WebSocketServer {
                  crearClientHandler.handleClientSetName(conn, obj);
                 
                 break;
+            case "rasberry":
+                System.out.println("Rasberry connectada");
         
             default:
                 break;
