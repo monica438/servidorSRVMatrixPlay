@@ -63,18 +63,29 @@ public class Main extends WebSocketServer {
         }
         String type = obj.optString("type", "");
         switch (type) {
-            case "setName":
-                 crearClientHandler.handleClientSetName(conn, obj);
-                
-                break;
-            case "rasberry":
-                System.out.println("Rasberry connectada");
-        
-            default:
-                break;
-        }
-    
-    
+                case "setName":
+                    crearClientHandler.handleClientSetName(conn, obj);
+                    break;
+                case "raspberry":
+                    String requestMessage = obj.optString("message", "");
+                    if ("solicito_config".equals(requestMessage)) {
+                        JSONObject config = new JSONObject();
+                        config.put("type", "config");
+                        config.put("groupName", "Grup4"); // Aquí pones el nombre de tu grupo
+                        serverUtils.sendSafe(conn, config.toString());
+                        System.out.println("[server] Enviado nombre del grupo a la Raspberry");
+                    } else {
+                        JSONObject respuesta = new JSONObject();
+                        respuesta.put("type", "ack_raspberry");
+                        respuesta.put("message", "Hola Raspberry! He recibido tu mensaje correctamente.");
+                        respuesta.put("status", "connected");
+                        serverUtils.sendSafe(conn, respuesta.toString());
+                    }
+                    break;
+
+                default:
+                    break;
+        }   
     }
 	    private static void registerShutdownHook(Main server) {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

@@ -1,9 +1,9 @@
 package com.project;
 
+import java.util.Map;
+
 import org.java_websocket.WebSocket;
 import org.json.JSONObject;
-
-import java.util.Map;
 
 /**
  * Classe encarregada de gestionar la creació i registre de nous clients.
