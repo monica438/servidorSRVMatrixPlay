@@ -127,7 +127,7 @@ public class Main extends WebSocketServer {
         for (Map.Entry<WebSocket, String> e : clients.snapshot().entrySet()) {
             WebSocket conn = e.getKey();
             serverUtils.sendSafe(conn, jocData.toString());
-        }
+            System.out.println(jocData.toString(4));        }
     }
 
 
@@ -168,7 +168,7 @@ public class Main extends WebSocketServer {
 
     private void sendCountdownToAll(int n) {
         JSONObject rst = msg(T_COUNTDOWN).put(K_VALUE, n);
-        broadcastExcept(null, rst.toString());
+        broadcast(rst.toString());
     }
         private void broadcastExcept(WebSocket sender, String payload) {
         for (Map.Entry<WebSocket, String> e : clients.snapshot().entrySet()) {
