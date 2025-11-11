@@ -63,5 +63,8 @@ public class CrearClientHandler {
         //serverUtils.sendSafe(conn, ok.toString());
 
         System.out.println("Nou client connectat: " + userName + " (" + color + ")");
+        if (clients.snapshot().size() == 2) {  // REQUIRED_CLIENTS
+        server.sendCountdown();
+    }
     }
 }

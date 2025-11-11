@@ -5,24 +5,20 @@ import org.json.JSONObject;
 public class ClientData {
     public String name;
     public String color;
-    public int mouseX;
-    public int mouseY;
-
+    public int palaX; 
+    public int palaY; 
+    public int punts; 
 
     public ClientData(String name, String color) {
-        this.name = name;
-        this.color = color;
-        this.mouseX = -1;
-        this.mouseY = -1;
-
+        this(name, color, 0, 0, 0);
     }
 
-    public ClientData(String name, String color, int mouseX, int mouseY) {
+    public ClientData(String name, String color, int palaX, int palaY, int punts) {
         this.name = name;
         this.color = color;
-        this.mouseX = mouseX;
-        this.mouseY = mouseY;
-
+        this.palaX = palaX;
+        this.palaY = palaY;
+        this.punts = punts;
     }
 
     @Override
@@ -30,26 +26,22 @@ public class ClientData {
         return this.toJSON().toString();
     }
 
-    // Converteix l'objecte a JSON
     public JSONObject toJSON() {
         JSONObject obj = new JSONObject();
         obj.put("name", name);
         obj.put("color", color);
-        obj.put("mouseX", mouseX);
-        obj.put("mouseY", mouseY);
-
+        obj.put("palaX", palaX);
+        obj.put("palaY", palaY);
+        obj.put("punts", punts);
         return obj;
     }
 
-    // Crea un ClientData a partir de JSON
     public static ClientData fromJSON(JSONObject obj) {
-        String name = obj.optString("name", null);
-        String color = obj.optString("color", null);
-
-        ClientData cd = new ClientData(name, color);
-        cd.mouseX = obj.optInt("mouseX", -1);
-        cd.mouseY = obj.optInt("mouseY", -1);
-
-        return cd;
+        String name = obj.optString("name", "Unknown");
+        String color = obj.optString("color", "gray");
+        int palaX = obj.optInt("palaX", 0);
+        int palaY = obj.optInt("palaY", 0);
+        int punts = obj.optInt("punts", 0);
+        return new ClientData(name, color, palaX, palaY, punts);
     }
 }
