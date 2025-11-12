@@ -4,6 +4,7 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -56,11 +57,11 @@ public class Main extends WebSocketServer {
         startTicker();
 	}
 
-    private void initializeGameObjects() {
-    // Pala del Jugador 1
-    gameObjects.put("P1", new GameObject("P1", 20, 220, 10, 60, "RED"));
-    gameObjects.put("P2", new GameObject("P2", 570, 220, 10, 60, "BLACK"));
-    gameObjects.put("B0", new GameObject("B0", 295, 245, 10, 10, "WHITE"));
+private void initializeGameObjects() {
+        gameObjects.put("P1", new GameObject("P1", 20, 170, 10, 60, "RED"));   
+        gameObjects.put("P2", new GameObject("P2", 570, 200, 10, 60, "BLACK")); 
+        gameObjects.put("B0", new GameObject("B0", 295, 195, 10, 10, "WHITE")); 
+
 
 }
 	@Override
