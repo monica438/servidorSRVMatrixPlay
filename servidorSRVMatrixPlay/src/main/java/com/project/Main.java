@@ -58,13 +58,10 @@ public class Main extends WebSocketServer {
 
     private void initializeGameObjects() {
     // Pala del Jugador 1
-    gameObjects.put("P1", new GameObject("P1", 0, 3, 1, 3,"RED")); 
+    gameObjects.put("P1", new GameObject("P1", 20, 220, 10, 60, "RED"));
+    gameObjects.put("P2", new GameObject("P2", 570, 220, 10, 60, "BLACK"));
+    gameObjects.put("B0", new GameObject("B0", 295, 245, 10, 10, "WHITE"));
 
-    // Pala del Jugador 2
-    gameObjects.put("P2", new GameObject("P2", 7, 3, 1, 3,"BLACK")); 
-
-    // Pelota
-    gameObjects.put("B0", new GameObject("B0", 4, 4, 1, 1,"WHITE"));
 }
 	@Override
 	public void onClose(WebSocket conn, int code, String reason, boolean remote) {
@@ -89,7 +86,6 @@ public class Main extends WebSocketServer {
 	}
 
     private void broadcastStatus() {
-        // --- Estado general de la partida ---
         JSONObject jocData = new JSONObject();
         jocData.put(K_TYPE, "jocData");
         jocData.put("estatPartida", "Jugant");
@@ -103,7 +99,6 @@ public class Main extends WebSocketServer {
         jocData.put("J1Punts", "0");
         jocData.put("J2Punts", "0");
 
-        // --- Tablero (ejemplo base 8x8) ---
         int[][] board = {
             {0, 0, 0, 0, 0, 0, 0, 0},
             {0, 1, 0, 0, 0, 0, 0, 0},
@@ -116,7 +111,6 @@ public class Main extends WebSocketServer {
         };
         jocData.put("board", board);
 
-        // --- Objetos del juego (palas y pelota) ---
         JSONArray arrObjects = new JSONArray();
         for (GameObject obj : gameObjects.values()) {
             arrObjects.put(obj.toJSON());
