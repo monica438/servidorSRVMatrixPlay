@@ -26,6 +26,10 @@ public class Main extends WebSocketServer {
     private volatile boolean countdownRunning = false;
     private static final String K_TYPE = "type";
     private static final String K_VALUE = "value";
+    private int bolaVelX;
+    private int bolaVelY;
+    private final int BOLA_SPEED = 5;
+    private final Random rand = new Random();
 
 
     private static final String T_COUNTDOWN = "countdown";  
@@ -100,17 +104,6 @@ private void initializeGameObjects() {
         jocData.put("J1Punts", "0");
         jocData.put("J2Punts", "0");
 
-        int[][] board = {
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {0, 1, 0, 0, 0, 0, 0, 0},
-            {0, 1, 0, 0, 0, 0, 0, 0},
-            {0, 1, 3, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 0, 2, 0},
-            {0, 0, 0, 0, 0, 0, 2, 0},
-            {0, 0, 0, 0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0, 0, 0, 0}
-        };
-        jocData.put("board", board);
 
         JSONArray arrObjects = new JSONArray();
         for (GameObject obj : gameObjects.values()) {
@@ -118,11 +111,49 @@ private void initializeGameObjects() {
         }
         jocData.put("objectsList", arrObjects);
 
-        // --- Enviar a todos los clientes ---
         for (Map.Entry<WebSocket, String> e : clients.snapshot().entrySet()) {
             WebSocket conn = e.getKey();
             serverUtils.sendSafe(conn, jocData.toString());
             System.out.println(jocData.toString(4));        }
+    }
+    
+    private void handleMove(WebSocket conn, JSONObject obj) {
+        String clientName = clients.nameBySocket(conn);
+        if (clientName == null) return;
+
+        ClientData cd = clientsData.get(clientName);
+        if (cd == null) return;
+
+        // El color del jugador determina qué objeto mueve
+        String color = cd.color;
+
+        String objectName;
+        if (color.equals("VERMELL")) {
+            objectName = "P1";
+        } else {
+            objectName = "P2";
+        }
+
+        GameObject paddle = gameObjects.get(objectName);
+        if (paddle == null) return;
+
+        String dir = obj.optString("direction");
+        int speed = 8;
+        switch (dir) {
+            case "up":
+                paddle.y -= speed;
+                break;
+            case "down":
+                paddle.y += speed;
+                break;
+        }
+
+        if (paddle.y < 0) {
+            paddle.y = 0;
+        }
+        if (paddle.y > 400 - 60) {  
+            paddle.y = 400 - 60; 
+        }
     }
 
 
@@ -148,6 +179,15 @@ private void initializeGameObjects() {
 
                     sendCountdownToAll(i);
                     if (i > 0) Thread.sleep(750); // ritme del compte enrere
+
+
+                    if (i == 0){
+                        GameObject bola = gameObjects.get("B0");
+                        bola.x = 295; // centro horizontal
+                        bola.y = 195; 
+                        bolaVelX = rand.nextBoolean() ? BOLA_SPEED : -BOLA_SPEED;
+                        bolaVelY = rand.nextInt(5) - 2; 
+                    }
                 }
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
@@ -192,6 +232,7 @@ private void initializeGameObjects() {
                         JSONObject config = new JSONObject();
                         config.put(K_TYPE, "config");
                         config.put("groupName", "Grup4");
+                        config.put("url", "wss://matrixplay4.ieti.site:443");
                         serverUtils.sendSafe(conn, config.toString());
                         System.out.println("[server] Enviado nombre del grupo a la Raspberry");
                     } else {
@@ -202,7 +243,8 @@ private void initializeGameObjects() {
                         serverUtils.sendSafe(conn, respuesta.toString());
                     }
                     break;
-
+                case "move":
+                    handleMove(conn, obj);
                 default:
                     break;
         }   
@@ -235,6 +277,36 @@ private void initializeGameObjects() {
         ticker.scheduleAtFixedRate(() -> {
             try {
                 if (!clients.snapshot().isEmpty()) {
+                GameObject bola = gameObjects.get("B0");
+                if (bola != null) {
+                    // Mover la bola
+                    bola.x += bolaVelX;
+                    bola.y += bolaVelY;
+
+                    // Rebotar arriba y abajo
+                    if (bola.y <= 0) {
+                        bola.y = 0;
+                        bolaVelY *= -1;
+                    }
+                    if (bola.y >= 400 - bola.alto) { // altura del canvas = 400
+                        bola.y = 400 - bola.alto;
+                        bolaVelY *= -1;
+                    }
+
+                    // Colisión con paletas
+                    GameObject p1 = gameObjects.get("P1");
+                    GameObject p2 = gameObjects.get("P2");
+                    if ((p1 != null && colision(bola, p1)) || (p2 != null && colision(bola, p2))) {
+                        bolaVelX *= -1;
+                    }
+                }
+
+
+
+
+
+
+
                     broadcastStatus();
                 }
             } catch (Exception e) {
@@ -252,6 +324,12 @@ private void initializeGameObjects() {
         }
     }
 
+    private boolean colision(GameObject bola, GameObject paddle) {
+        return bola.x < paddle.x + paddle.ancho &&
+            bola.x + bola.alto > paddle.x &&
+            bola.y < paddle.y + paddle.alto &&
+            bola.y + bola.alto > paddle.y;
+    }
 
 	    /** Punt d'entrada. */
     public static void main(String[] args) {

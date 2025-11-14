@@ -30,7 +30,6 @@ public class CrearClientHandler {
      */
     public void handleClientSetName(WebSocket conn, JSONObject obj) {
         String userName = obj.optString("value", "").trim();
-
         // Comprova que el nom sigui vàlid
         if (userName.isEmpty()) {
             JSONObject error = new JSONObject()
