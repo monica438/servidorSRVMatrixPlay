@@ -39,6 +39,8 @@ public class Main extends WebSocketServer {
     private static final int SEND_FPS = 30;
     private final ScheduledExecutorService ticker;
     private static final int REQUIRED_CLIENTS = 2;
+    public static final int WIDTH = 600;
+    public static final int HEIGHT = 400;
 
     public Main(InetSocketAddress address) {
         super(address);
