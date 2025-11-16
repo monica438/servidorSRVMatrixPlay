@@ -111,10 +111,9 @@ private void initializeGameObjects() {
         }
         jocData.put("objectsList", arrObjects);
 
-        for (Map.Entry<WebSocket, String> e : clients.snapshot().entrySet()) {
-            WebSocket conn = e.getKey();
-            serverUtils.sendSafe(conn, jocData.toString());
-            System.out.println(jocData.toString(4));        }
+
+            broadcast(jocData.toString());
+            System.out.println(jocData.toString(4));        
     }
     
     private void handleMove(WebSocket conn, JSONObject obj) {
@@ -162,7 +161,7 @@ private void initializeGameObjects() {
 
 
 
-     public void sendCountdown() {
+ public void sendCountdown() {
         synchronized (this) {
             if (countdownRunning) return;
             if (clients.snapshot().size() != REQUIRED_CLIENTS) return;
@@ -172,23 +171,33 @@ private void initializeGameObjects() {
         new Thread(() -> {
             try {
                 for (int i = 3; i >= 0; i--) {
-                    // Si durant el compte enrere ja no hi ha els clients requerits, cancel·la
+
+                    // Si durante el conteo ya no hay suficientes jugadores, cancelar
                     if (clients.snapshot().size() < REQUIRED_CLIENTS) {
                         break;
                     }
 
+                    // Enviar número del countdown
                     sendCountdownToAll(i);
-                    if (i > 0) Thread.sleep(750); // ritme del compte enrere
 
+                    // Cuando llega a 0, lanzar bola después de un pequeño delay
+                    if (i == 0) {
+                        Thread.sleep(250); // Permite que la Raspberry muestre el "0"
 
-                    if (i == 0){
                         GameObject bola = gameObjects.get("B0");
-                        bola.x = 295; // centro horizontal
-                        bola.y = 195; 
-                        bolaVelX = rand.nextBoolean() ? BOLA_SPEED : -BOLA_SPEED;
-                        bolaVelY = rand.nextInt(5) - 2; 
+                        if (bola != null) {
+                            bola.x = 295; 
+                            bola.y = 195;
+                            bolaVelX = rand.nextBoolean() ? BOLA_SPEED : -BOLA_SPEED;
+                            bolaVelY = rand.nextInt(5) - 2;
+                        }
+
+                    } else {
+                        // Ritmo del countdown para 3,2,1
+                        Thread.sleep(750);
                     }
                 }
+
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
             } finally {
@@ -196,6 +205,7 @@ private void initializeGameObjects() {
             }
         }, "CountdownThread").start();
     }
+
 
         private static JSONObject msg(String type) {
         return new JSONObject().put(K_TYPE, type);
@@ -291,6 +301,14 @@ private void initializeGameObjects() {
                     if (bola.y >= 400 - bola.alto) { // altura del canvas = 400
                         bola.y = 400 - bola.alto;
                         bolaVelY *= -1;
+                    }
+                    if (bola.x <= 0) {
+                        bola.x = 0;
+                        bolaVelX *= -1;
+                    }
+                    if (bola.x >= 600 - bola.ancho) { // ancho del canvas = 600
+                        bola.x = 600 - bola.ancho;
+                        bolaVelX *= -1;
                     }
 
                     // Colisión con paletas
