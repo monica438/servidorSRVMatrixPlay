@@ -41,7 +41,7 @@ public class Main extends WebSocketServer {
     private static final int REQUIRED_CLIENTS = 2;
     public static final int WIDTH = 600;
     public static final int HEIGHT = 400;
-
+    public String partida = "";
     public Main(InetSocketAddress address) {
         super(address);
         this.clients = new ClientRegistry();
@@ -70,11 +70,25 @@ private void initializeGameObjects() {
 
 
 }
-	@Override
-	public void onClose(WebSocket conn, int code, String reason, boolean remote) {
+    @Override
+    public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         String name = clients.remove(conn);
         System.out.println("Client desconnectat: " + name);
+
+        // Reiniciar partida solo si falta alguien
+        if (clients.snapshot().size() < REQUIRED_CLIENTS) {
+            partida = "Esperant";
+
+            GameObject bola = gameObjects.get("B0");
+            if (bola != null) {
+                bola.x = 295;
+                bola.y = 195;
+            }
+
+            broadcastStatus();
+        }
     }
+
 
 	@Override
 	public void onOpen(WebSocket conn, ClientHandshake handshake) {
@@ -95,7 +109,7 @@ private void initializeGameObjects() {
     private void broadcastStatus() {
         JSONObject jocData = new JSONObject();
         jocData.put(K_TYPE, "jocData");
-        jocData.put("estatPartida", "Jugant");
+        jocData.put("estatPartida", partida);
 
         JSONArray jugadors = new JSONArray();
         for (String name : clients.snapshot().values()) {
@@ -185,7 +199,7 @@ private void initializeGameObjects() {
                     // Cuando llega a 0, lanzar bola después de un pequeño delay
                     if (i == 0) {
                         Thread.sleep(250); // Permite que la Raspberry muestre el "0"
-
+                        partida = "Jugant";
                         GameObject bola = gameObjects.get("B0");
                         if (bola != null) {
                             bola.x = 295; 
@@ -193,7 +207,7 @@ private void initializeGameObjects() {
                             bolaVelX = rand.nextBoolean() ? BOLA_SPEED : -BOLA_SPEED;
                             bolaVelY = rand.nextInt(5) - 2;
                         }
-
+                        broadcastStatus(); 
                     } else {
                         // Ritmo del countdown para 3,2,1
                         Thread.sleep(750);
@@ -257,6 +271,18 @@ private void initializeGameObjects() {
                     break;
                 case "move":
                     handleMove(conn, obj);
+                    break;
+
+                case "partida":
+                    String nuevoValor = obj.optString("value", "");
+                    if (partida.equals("Jugant") && nuevoValor.equals("Esperant")) {
+                        break;
+                    }
+
+                    partida = nuevoValor;
+                    break;
+
+
                 default:
                     break;
         }   
