@@ -188,17 +188,13 @@ private void initializeGameObjects() {
             try {
                 for (int i = 3; i >= 0; i--) {
 
-                    // Si durante el conteo ya no hay suficientes jugadores, cancelar
                     if (clients.snapshot().size() < REQUIRED_CLIENTS) {
                         break;
                     }
 
-                    // Enviar número del countdown
                     sendCountdownToAll(i);
-
-                    // Cuando llega a 0, lanzar bola después de un pequeño delay
                     if (i == 0) {
-                        Thread.sleep(250); // Permite que la Raspberry muestre el "0"
+                        Thread.sleep(250); 
                         partida = "Jugant";
                         GameObject bola = gameObjects.get("B0");
                         if (bola != null) {
@@ -209,7 +205,6 @@ private void initializeGameObjects() {
                         }
                         broadcastStatus(); 
                     } else {
-                        // Ritmo del countdown para 3,2,1
                         Thread.sleep(750);
                     }
                 }

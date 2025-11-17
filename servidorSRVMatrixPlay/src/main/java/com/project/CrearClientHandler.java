@@ -1,5 +1,7 @@
 package com.project;
 
+import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.Map;
 
 import org.java_websocket.WebSocket;
@@ -60,8 +62,12 @@ public class CrearClientHandler {
             .put("type", "RegistreOk")
             .put("value", "Benvingut" + userName + "!");
         //serverUtils.sendSafe(conn, ok.toString());
+        try {
+            GestioDB.afegeixEntradaLog("Nou client connectat: " + userName + " (" + color + ")",LocalDate.now().toString());
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
 
-        System.out.println("Nou client connectat: " + userName + " (" + color + ")");
         if (clients.snapshot().size() == 2) {  // REQUIRED_CLIENTS
         server.sendCountdown();
     }
