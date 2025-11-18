@@ -184,6 +184,35 @@ public class Main extends WebSocketServer {
 
     }
 
+    private void handlePosition(WebSocket conn, JSONObject obj) {
+        String clientName = clients.nameBySocket(conn);
+        int y = obj.optInt("y", -1);
+        System.out.println("[handlePosition] clientName=" + clientName + " y=" + y);
+        
+        if (clientName == null || y < 0) return;
+
+        ClientData cd = clientsData.get(clientName);
+        if (cd == null) return;
+
+        // Determinar qué pala mover según el color del jugador
+        String objectName = cd.color.equals("VERMELL") ? "P1" : "P2";
+        GameObject paddle = gameObjects.get(objectName);
+        if (paddle == null) return;
+
+        // Actualizar posición directamente
+        paddle.y = y;
+
+        // Limitar a los bordes del canvas
+        if (paddle.y < 0) {
+            paddle.y = 0;
+        }
+        if (paddle.y > HEIGHT - paddle.alto) {
+            paddle.y = HEIGHT - paddle.alto;
+        }
+        
+        System.out.println("[handlePosition] " + objectName + " set to y=" + paddle.y);
+    }
+
 
 
 
@@ -282,6 +311,9 @@ public class Main extends WebSocketServer {
                     break;
                 case "move":
                     handleMove(conn, obj);
+                    break;
+                case "position":
+                    handlePosition(conn, obj);
                     break;
 
                 case "partida":
