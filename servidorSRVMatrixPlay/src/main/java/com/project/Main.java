@@ -151,6 +151,7 @@ public class Main extends WebSocketServer {
     
     private void handleMove(WebSocket conn, JSONObject obj) {
         String clientName = clients.nameBySocket(conn);
+        System.out.println("[handleMove] clientName=" + clientName + " direction=" + obj.optString("direction"));
         if (clientName == null) return;
 
         ClientData cd = clientsData.get(clientName);
@@ -179,6 +180,7 @@ public class Main extends WebSocketServer {
         if (paddle.y > HEIGHT) {
             paddle.y = HEIGHT;
         }
+        System.out.println("[handleMove] " + objectName + " moved to y=" + paddle.y);
 
     }
 
@@ -248,9 +250,11 @@ public class Main extends WebSocketServer {
 
     @Override
     public void onMessage(WebSocket conn, String message) {
+        System.out.println("[onMessage] From " + conn.getRemoteSocketAddress() + " raw: " + message);
         JSONObject obj;
         try {
             obj = new JSONObject(message);
+            System.out.println("[onMessage] Parsed JSON type=" + obj.optString("type"));
         } catch (Exception ex) {
             return; // JSON invàlid
         }
