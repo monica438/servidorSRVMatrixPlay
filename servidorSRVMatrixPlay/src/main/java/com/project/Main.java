@@ -1,6 +1,7 @@
 package com.project;
 
 import java.net.InetSocketAddress;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -103,6 +104,12 @@ public class Main extends WebSocketServer {
 	@Override
 	public void onOpen(WebSocket conn, ClientHandshake handshake) {
 		System.out.println("New connection established!");
+        try {
+            GestioDB.afegeixEntradaLog("Raspberry connectada",LocalDate.now().toString());
+            
+        } catch (Exception e) {
+            // TODO: handle exception
+        }
 		JSONObject hola = new JSONObject();
 		hola.put(K_TYPE, "broadcastHola");
 		hola.put(K_VALUE, "hola");
@@ -166,14 +173,11 @@ public class Main extends WebSocketServer {
                 break;
         }
 
-        // Limitar el movimiento dentro de la ventana
         if (paddle.y < 0) {
             paddle.y = 0;
         }
-        // Aquí nos aseguramos de que no se salga por abajo
-        int margin = 60;
-        if (paddle.y > HEIGHT - paddle.alto - margin) {
-            paddle.y = HEIGHT - paddle.alto - margin;
+        if (paddle.y > HEIGHT) {
+            paddle.y = HEIGHT;
         }
 
     }
