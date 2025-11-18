@@ -10,7 +10,7 @@ public class GestioDB {
     // Obrir connexió un cop
     public static void iniciarConnexio() throws SQLException {
         if (connGeneral == null || connGeneral.isClosed()) {
-            connGeneral = UtilsSQLite.connect("servidorSRVMatrixPlay/dades/log.sqlite");
+            connGeneral = UtilsSQLite.connect("dades/log.sqlite");
         }
     }
 
@@ -20,7 +20,7 @@ public class GestioDB {
     }
 
     public static void crearDB() throws SQLException {
-        try (Connection conn = UtilsSQLite.connect("servidorSRVMatrixPlay/dades/log.sqlite")) {
+        try (Connection conn = UtilsSQLite.connect("dades/log.sqlite")) {
             UtilsSQLite.queryUpdate(conn, "DROP TABLE IF EXISTS log");
             UtilsSQLite.queryUpdate(conn,
                     "CREATE TABLE IF NOT EXISTS log ("

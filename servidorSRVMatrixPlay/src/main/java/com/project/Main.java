@@ -60,16 +60,26 @@ public class Main extends WebSocketServer {
 	@Override
 	public void onStart() {
 		System.out.println("Server started!");
+        try {
+            GestioDB.crearDB();
+
+            GestioDB.iniciarConnexio();            
+
+        } catch (Exception e) {
+            System.err.println("Error de bd: " + e.getMessage());
+            e.printStackTrace();
+        }
+
         startTicker();
 	}
 
-private void initializeGameObjects() {
-        gameObjects.put("P1", new GameObject("P1", 20, 170, 10, 60, "RED"));   
-        gameObjects.put("P2", new GameObject("P2", 570, 200, 10, 60, "BLACK")); 
-        gameObjects.put("B0", new GameObject("B0", 295, 195, 10, 10, "WHITE")); 
+    private void initializeGameObjects() {
+            gameObjects.put("P1", new GameObject("P1", 20, 170, 10, 60, "RED"));   
+            gameObjects.put("P2", new GameObject("P2", 570, 200, 10, 60, "BLACK")); 
+            gameObjects.put("B0", new GameObject("B0", 295, 195, 10, 10, "WHITE")); 
 
 
-}
+    }
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         String name = clients.remove(conn);
@@ -139,21 +149,14 @@ private void initializeGameObjects() {
         ClientData cd = clientsData.get(clientName);
         if (cd == null) return;
 
-        // El color del jugador determina qué objeto mueve
-        String color = cd.color;
-
-        String objectName;
-        if (color.equals("VERMELL")) {
-            objectName = "P1";
-        } else {
-            objectName = "P2";
-        }
-
+        // Determinar qué pala mover según el color del jugador
+        String objectName = cd.color.equals("VERMELL") ? "P1" : "P2";
         GameObject paddle = gameObjects.get(objectName);
         if (paddle == null) return;
 
-        String dir = obj.optString("direction");
         int speed = 8;
+        String dir = obj.optString("direction");
+
         switch (dir) {
             case "up":
                 paddle.y -= speed;
@@ -163,13 +166,18 @@ private void initializeGameObjects() {
                 break;
         }
 
+        // Limitar el movimiento dentro de la ventana
         if (paddle.y < 0) {
             paddle.y = 0;
         }
-        if (paddle.y > 400 - 60) {  
-            paddle.y = 400 - 60; 
+        // Aquí nos aseguramos de que no se salga por abajo
+        int margin = 60;
+        if (paddle.y > HEIGHT - paddle.alto - margin) {
+            paddle.y = HEIGHT - paddle.alto - margin;
         }
+
     }
+
 
 
 
@@ -200,8 +208,8 @@ private void initializeGameObjects() {
                         if (bola != null) {
                             bola.x = 295; 
                             bola.y = 195;
-                            bolaVelX = rand.nextBoolean() ? BOLA_SPEED : -BOLA_SPEED;
-                            bolaVelY = rand.nextInt(5) - 2;
+                            //bolaVelX = rand.nextBoolean() ? BOLA_SPEED : -BOLA_SPEED;
+                            //bolaVelY = rand.nextInt(5) - 2;
                         }
                         broadcastStatus(); 
                     } else {
@@ -310,7 +318,7 @@ private void initializeGameObjects() {
         ticker.scheduleAtFixedRate(() -> {
             try {
                 if (!clients.snapshot().isEmpty()) {
-                GameObject bola = gameObjects.get("B0");
+                /*GameObject bola = gameObjects.get("B0");
                 if (bola != null) {
                     // Mover la bola
                     bola.x += bolaVelX;
@@ -340,7 +348,7 @@ private void initializeGameObjects() {
                     if ((p1 != null && colision(bola, p1)) || (p2 != null && colision(bola, p2))) {
                         bolaVelX *= -1;
                     }
-                }
+                }*/
 
 
 
