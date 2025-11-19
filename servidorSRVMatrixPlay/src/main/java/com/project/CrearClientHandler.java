@@ -31,6 +31,7 @@ public class CrearClientHandler {
      * Si és vàlid, s’afegeix el client i se li assigna un color.
      */
     public void handleClientSetName(WebSocket conn, JSONObject obj) {
+        System.out.println("[handleClientSetName] from " + conn.getRemoteSocketAddress() + " payload=" + obj.toString());
         String userName = obj.optString("value", "").trim();
         // Comprova que el nom sigui vàlid
         if (userName.isEmpty()) {
@@ -60,8 +61,10 @@ public class CrearClientHandler {
         clientsData.put(userName, new ClientData(userName, color));
         JSONObject ok = new JSONObject()
             .put("type", "RegistreOk")
-            .put("value", "Benvingut" + userName + "!");
-        //serverUtils.sendSafe(conn, ok.toString());
+            .put("value", "Benvingut " + userName + "!")
+            .put("color", color)
+            .put("playerNumber", clients.snapshot().size()); 
+        serverUtils.sendSafe(conn, ok.toString());
         try {
             GestioDB.afegeixEntradaLog("Nou client connectat: " + userName + " (" + color + ")",LocalDate.now().toString());
         } catch (SQLException e) {
