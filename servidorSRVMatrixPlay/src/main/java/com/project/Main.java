@@ -166,20 +166,17 @@ public class Main extends WebSocketServer {
         String dir = obj.optString("direction");
 
         switch (dir) {
-            case "up":
-                paddle.y -= speed;
-                break;
-            case "down":
-                paddle.y += speed;
-                break;
+            case "up" -> paddle.y -= speed;
+            case "down" -> paddle.y += speed;
         }
 
         if (paddle.y < 0) {
             paddle.y = 0;
         }
-        if (paddle.y > HEIGHT) {
-            paddle.y = HEIGHT;
-        }
+            // Evitar que la pala se salga por abajo: límite = altura del canvas - alto de la pala
+            if (paddle.y > HEIGHT - paddle.alto) {
+                paddle.y = HEIGHT - paddle.alto;
+            }
         System.out.println("[handleMove] " + objectName + " moved to y=" + paddle.y);
 
     }
