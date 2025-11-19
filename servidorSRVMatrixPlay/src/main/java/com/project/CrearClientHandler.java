@@ -61,7 +61,9 @@ public class CrearClientHandler {
         clientsData.put(userName, new ClientData(userName, color));
         JSONObject ok = new JSONObject()
             .put("type", "RegistreOk")
-            .put("value", "Benvingut " + userName + "!");
+            .put("value", "Benvingut " + userName + "!")
+            .put("color", color)
+            .put("playerNumber", clients.snapshot().size()); 
         serverUtils.sendSafe(conn, ok.toString());
         try {
             GestioDB.afegeixEntradaLog("Nou client connectat: " + userName + " (" + color + ")",LocalDate.now().toString());
