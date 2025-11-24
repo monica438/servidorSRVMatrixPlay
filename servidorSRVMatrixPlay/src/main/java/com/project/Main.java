@@ -37,12 +37,17 @@ public class Main extends WebSocketServer {
 	private final ClientRegistry clients;
     private final CrearClientHandler crearClientHandler;
     private final ServerUtils serverUtils;
+    
     private static final int SEND_FPS = 30;
     private final ScheduledExecutorService ticker;
     private static final int REQUIRED_CLIENTS = 2;
     public static final int WIDTH = 600;
     public static final int HEIGHT = 400;
     public String partida = "";
+    public int J1punts = 0;
+    public int J2Punts = 0;
+    public GameObject ultimJugadorGol = null;
+
     public Main(InetSocketAddress address) {
         super(address);
         this.clients = new ClientRegistry();
@@ -134,8 +139,8 @@ public class Main extends WebSocketServer {
         }
         jocData.put("Jugadors", jugadors);
 
-        jocData.put("J1Punts", "0");
-        jocData.put("J2Punts", "0");
+        jocData.put("J1Punts", J1punts);
+        jocData.put("J2Punts", J2Punts);
 
 
         JSONArray arrObjects = new JSONArray();
@@ -157,7 +162,6 @@ public class Main extends WebSocketServer {
         ClientData cd = clientsData.get(clientName);
         if (cd == null) return;
 
-        // Determinar qué pala mover según el color del jugador
         String objectName = cd.color.equals("VERMELL") ? "P1" : "P2";
         GameObject paddle = gameObjects.get(objectName);
         if (paddle == null) return;
@@ -238,10 +242,11 @@ public class Main extends WebSocketServer {
                         partida = "Jugant";
                         GameObject bola = gameObjects.get("B0");
                         if (bola != null) {
-                            bola.x = 295; 
-                            bola.y = 195;
-                            //bolaVelX = rand.nextBoolean() ? BOLA_SPEED : -BOLA_SPEED;
-                            //bolaVelY = rand.nextInt(5) - 2;
+                            bola.x = WIDTH / 2 -bola.ancho / 2; 
+                            bola.y = rand.nextBoolean() ? HEIGHT / 4 : 3 * HEIGHT / 4;
+
+                            bolaVelX = rand.nextBoolean() ? BOLA_SPEED : -BOLA_SPEED;
+                            bolaVelY = rand.nextInt(3) - 1; 
                         }
                         broadcastStatus(); 
                     } else {
@@ -256,6 +261,9 @@ public class Main extends WebSocketServer {
             }
         }, "CountdownThread").start();
     }
+
+
+    
 
 
         private static JSONObject msg(String type) {
@@ -350,48 +358,77 @@ public class Main extends WebSocketServer {
         }
     }
 
-        private void startTicker() {
+    private void startTicker() {
         long periodMs = Math.max(1, 1000 / SEND_FPS);
         ticker.scheduleAtFixedRate(() -> {
             try {
                 if (!clients.snapshot().isEmpty()) {
-                /*GameObject bola = gameObjects.get("B0");
-                if (bola != null) {
-                    // Mover la bola
-                    bola.x += bolaVelX;
-                    bola.y += bolaVelY;
-
-                    // Rebotar arriba y abajo
-                    if (bola.y <= 0) {
-                        bola.y = 0;
-                        bolaVelY *= -1;
-                    }
-                    if (bola.y >= 400 - bola.alto) { // altura del canvas = 400
-                        bola.y = 400 - bola.alto;
-                        bolaVelY *= -1;
-                    }
-                    if (bola.x <= 0) {
-                        bola.x = 0;
-                        bolaVelX *= -1;
-                    }
-                    if (bola.x >= 600 - bola.ancho) { // ancho del canvas = 600
-                        bola.x = 600 - bola.ancho;
-                        bolaVelX *= -1;
-                    }
-
-                    // Colisión con paletas
+                    GameObject bola = gameObjects.get("B0");
                     GameObject p1 = gameObjects.get("P1");
                     GameObject p2 = gameObjects.get("P2");
-                    if ((p1 != null && colision(bola, p1)) || (p2 != null && colision(bola, p2))) {
-                        bolaVelX *= -1;
+
+                    if (bola != null) {
+                        float nextX = bola.x + bolaVelX;
+                        float nextY = bola.y + bolaVelY;
+
+                        // Colisión con P1
+                        if (p1 != null) {
+                            float[] hitP1 = ballIntersectsPaddle(
+                                bola.x, bola.y,
+                                nextX, nextY,
+                                p1.x, p1.y,
+                                p1.x, p1.y + p1.alto
+                            );
+                            if (hitP1 != null) {
+                                bolaVelX *= -1;
+                                bola.x = (int) hitP1[0];
+                                bola.y = (int) hitP1[1];
+                                nextX = bola.x + bolaVelX;
+                                nextY = bola.y + bolaVelY;
+                            }
+                        }
+
+                        if (p2 != null) {
+                            float[] hitP2 = ballIntersectsPaddle(
+                                bola.x, bola.y,
+                                nextX, nextY,
+                                p2.x, p2.y,
+                                p2.x, p2.y + p2.alto
+                            );
+                            if (hitP2 != null) {
+                                bolaVelX *= -1;
+                                bola.x = (int) hitP2[0];
+                                bola.y = (int) hitP2[1];
+                                nextX = bola.x + bolaVelX;
+                                nextY = bola.y + bolaVelY;
+                            }
+                        }
+
+                        bola.x += bolaVelX;
+                        bola.y += bolaVelY;
+
+                        if (bola.y <= 0) {
+                            bola.y = 0;
+                            bolaVelY *= -1;
+                        }
+                    if (bola.y >= HEIGHT) {
+                            bola.y = HEIGHT;
+                            bolaVelY *= -1;
+                        }
+                        
+                        if (bola.x <= 0) {
+                            bola.x = 0;
+                            J2Punts++;
+                            ultimJugadorGol = gameObjects.get("P1");
+                            reiniciarBola();
+                        }
+                        if (bola.x >= 600 - bola.ancho) {
+                            bola.x = 600 - bola.ancho;
+                            J1punts++;
+                            ultimJugadorGol = gameObjects.get("P2");
+                            reiniciarBola();
+                            }
                     }
-                }*/
-
-
-
-
-
-
 
                     broadcastStatus();
                 }
@@ -400,6 +437,21 @@ public class Main extends WebSocketServer {
             }
         }, 0, periodMs, TimeUnit.MILLISECONDS);
     }
+
+
+
+
+    private void reiniciarBola() {
+        GameObject bola = gameObjects.get("B0");
+
+        bola.x = WIDTH / 2 - bola.ancho / 2;
+        bola.y = rand.nextBoolean() ? HEIGHT / 4 : (3 * HEIGHT / 4);
+
+        bolaVelX = rand.nextBoolean() ? BOLA_SPEED : -BOLA_SPEED;
+        bolaVelY = rand.nextInt(3) - 1;
+    }
+
+    
 
     private void stopTicker() {
         try {
@@ -410,11 +462,45 @@ public class Main extends WebSocketServer {
         }
     }
 
-    private boolean colision(GameObject bola, GameObject paddle) {
-        return bola.x < paddle.x + paddle.ancho &&
-            bola.x + bola.alto > paddle.x &&
-            bola.y < paddle.y + paddle.alto &&
-            bola.y + bola.alto > paddle.y;
+
+    public static float[] ballIntersectsPaddle(
+            float ballPosX, float ballPosY,
+            float ballNextX, float ballNextY,
+            float paddleBottomX, float paddleBottomY,
+            float paddleTopX, float paddleTopY
+    ) {
+        // Line AB = ball movement
+        float x1 = ballPosX;
+        float y1 = ballPosY;
+        float x2 = ballNextX;
+        float y2 = ballNextY;
+
+        // Line CD = paddle segment
+        float x3 = paddleBottomX;
+        float y3 = paddleBottomY;
+        float x4 = paddleTopX;
+        float y4 = paddleTopY;
+
+        // Compute denominador for intersection
+        float denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+        // Parallel or collinear → no intersection
+        if (denom == 0) {
+            return null;
+        }
+
+        // Compute t and u for parametric intersection
+        float t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+        float u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+
+        // Check if intersection lies within both segments
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+            float ix = x1 + t * (x2 - x1);
+            float iy = y1 + t * (y2 - y1);
+            return new float[] { ix, iy };
+        }
+
+        return null;
     }
 
 	    /** Punt d'entrada. */
