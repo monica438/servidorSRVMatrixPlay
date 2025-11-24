@@ -80,30 +80,27 @@ public class Main extends WebSocketServer {
 	}
 
     private void initializeGameObjects() {
-            gameObjects.put("P1", new GameObject("P1", 20, 170, 10, 60, "RED"));   
-            gameObjects.put("P2", new GameObject("P2", 570, 200, 10, 60, "BLACK")); 
-            gameObjects.put("B0", new GameObject("B0", 295, 195, 10, 10, "WHITE")); 
+            gameObjects.put("P1", new GameObject("P1", 20, 170, 15, 100, "RED"));   
+            gameObjects.put("P2", new GameObject("P2", 570, 200, 15, 100, "BLACK")); 
+            gameObjects.put("B0", new GameObject("B0", 295, 195, 22, 22, "WHITE")); 
 
 
     }
     @Override
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         String name = clients.remove(conn);
+        clientsData.remove(name);
         System.out.println("Client desconnectat: " + name);
 
-        // Reiniciar partida solo si falta alguien
-        if (clients.snapshot().size() < REQUIRED_CLIENTS) {
-            partida = "Esperant";
+        // Reiniciar la partida siempre que un cliente se desconecte
+        reiniciarPartida();
 
-            GameObject bola = gameObjects.get("B0");
-            if (bola != null) {
-                bola.x = 295;
-                bola.y = 195;
-            }
-
-            broadcastStatus();
+        // Opcional: si quieres iniciar la cuenta atrás solo cuando vuelvan suficientes jugadores
+        if (clients.snapshot().size() == REQUIRED_CLIENTS) {
+            sendCountdown();
         }
     }
+
 
 
 	@Override
@@ -170,17 +167,21 @@ public class Main extends WebSocketServer {
         String dir = obj.optString("direction");
 
         switch (dir) {
-            case "up" -> paddle.y -= speed;
-            case "down" -> paddle.y += speed;
+            case "up":
+                paddle.y -= speed;
+                break;
+            case "down":
+                paddle.y += speed;
+                break;
         }
 
         if (paddle.y < 0) {
             paddle.y = 0;
         }
-            // Evitar que la pala se salga por abajo: límite = altura del canvas - alto de la pala
-            if (paddle.y > HEIGHT - paddle.alto) {
-                paddle.y = HEIGHT - paddle.alto;
-            }
+        if (paddle.y > HEIGHT - paddle.alto) {
+            paddle.y = HEIGHT - paddle.alto;
+        }
+
         System.out.println("[handleMove] " + objectName + " moved to y=" + paddle.y);
 
     }
@@ -329,8 +330,9 @@ public class Main extends WebSocketServer {
 
                     partida = nuevoValor;
                     break;
-
-
+                case "desconecta":
+                    clients.remove(conn);
+                    conn.close(1000,"Fi de partida");
                 default:
                     break;
         }   
@@ -363,6 +365,9 @@ public class Main extends WebSocketServer {
         ticker.scheduleAtFixedRate(() -> {
             try {
                 if (!clients.snapshot().isEmpty()) {
+                    if (partida.equals("Finalitzada")){
+                        return;
+                    }
                     GameObject bola = gameObjects.get("B0");
                     GameObject p1 = gameObjects.get("P1");
                     GameObject p2 = gameObjects.get("P2");
@@ -381,6 +386,10 @@ public class Main extends WebSocketServer {
                             );
                             if (hitP1 != null) {
                                 bolaVelX *= -1;
+                                float paddleCenter = p1.y + p1.alto / 2f;
+                                float relativeIntersectY = bola.y + bola.alto / 2f - paddleCenter;
+                                float normalizedRelativeIntersectionY = relativeIntersectY / (p1.alto / 2f);
+                                bolaVelY = (int)(normalizedRelativeIntersectionY * BOLA_SPEED);
                                 bola.x = (int) hitP1[0];
                                 bola.y = (int) hitP1[1];
                                 nextX = bola.x + bolaVelX;
@@ -397,6 +406,10 @@ public class Main extends WebSocketServer {
                             );
                             if (hitP2 != null) {
                                 bolaVelX *= -1;
+                                float paddleCenter = p1.y + p1.alto / 2f;
+                                float relativeIntersectY = bola.y + bola.alto / 2f - paddleCenter;
+                                float normalizedRelativeIntersectionY = relativeIntersectY / (p1.alto / 2f);
+                                bolaVelY = (int)(normalizedRelativeIntersectionY * BOLA_SPEED);
                                 bola.x = (int) hitP2[0];
                                 bola.y = (int) hitP2[1];
                                 nextX = bola.x + bolaVelX;
@@ -411,23 +424,26 @@ public class Main extends WebSocketServer {
                             bola.y = 0;
                             bolaVelY *= -1;
                         }
-                    if (bola.y >= HEIGHT) {
-                            bola.y = HEIGHT;
+                            
+                        if (bola.y >= HEIGHT - bola.alto) {
+                            bola.y = HEIGHT - bola.alto;
                             bolaVelY *= -1;
                         }
+
                         
                         if (bola.x <= 0) {
                             bola.x = 0;
                             J2Punts++;
-                            ultimJugadorGol = gameObjects.get("P1");
+                            ultimJugadorGol = p1;
                             reiniciarBola();
                         }
                         if (bola.x >= 600 - bola.ancho) {
                             bola.x = 600 - bola.ancho;
                             J1punts++;
-                            ultimJugadorGol = gameObjects.get("P2");
+                            ultimJugadorGol = p2;
                             reiniciarBola();
                             }
+                        gestionarGols();
                     }
 
                     broadcastStatus();
@@ -439,6 +455,53 @@ public class Main extends WebSocketServer {
     }
 
 
+
+
+    private void gestionarGols() {
+        if (J1punts < 3 && J2Punts < 3) return;
+
+        partida = "Finalitzada";
+
+        String guanyador = "";
+        String perdedor = "";
+        String colorWinner = "";
+        String colorLoser = "";
+
+        if (ultimJugadorGol == gameObjects.get("P1")) {
+            guanyador = clientsData.entrySet().stream()
+                    .filter(e -> e.getValue().color.equals("VERMELL"))
+                    .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
+            perdedor = clientsData.entrySet().stream()
+                    .filter(e -> e.getValue().color.equals("NEGRE"))
+                    .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
+            colorWinner = "VERMELL";
+            colorLoser = "NEGRE";
+        } 
+        else if (ultimJugadorGol == gameObjects.get("P2")) {
+            guanyador = clientsData.entrySet().stream()
+                    .filter(e -> e.getValue().color.equals("NEGRE"))
+                    .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
+            perdedor = clientsData.entrySet().stream()
+                    .filter(e -> e.getValue().color.equals("VERMELL"))
+                    .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
+            colorWinner = "NEGRE";
+            colorLoser = "VERMELL";
+        }
+
+        // --- Enviar GameOver ---
+        JSONObject msg = new JSONObject();
+        msg.put("type", "gameOver");
+        msg.put("winner", guanyador);
+        msg.put("colorWinner", colorWinner);
+        msg.put("loser", perdedor);
+        msg.put("colorLoser", colorLoser);
+        broadcast(msg.toString());
+
+        System.out.println("Partida finalitzada! Guanyador: " + guanyador);
+
+        // --- Reset COMPLETO ---
+        reiniciarPartida();
+    }
 
 
     private void reiniciarBola() {
@@ -502,6 +565,40 @@ public class Main extends WebSocketServer {
 
         return null;
     }
+
+
+
+    public void reiniciarPartida() {
+        // Reset puntuaciones
+        J1punts = 0;
+        J2Punts = 0;
+
+        // Reset jugador del último gol
+        ultimJugadorGol = null;
+
+        // Reset palas
+        GameObject p1 = gameObjects.get("P1");
+        if (p1 != null) {
+            p1.x = 20;
+            p1.y = 170;
+        }
+
+        GameObject p2 = gameObjects.get("P2");
+        if (p2 != null) {
+            p2.x = 570;
+            p2.y = 200;
+        }
+
+        // Reset bola
+        reiniciarBola();
+
+        // Volver a estado inicial
+        partida = "Esperant";
+
+        // Actualizar a clientes
+        broadcastStatus();
+    }
+
 
 	    /** Punt d'entrada. */
     public static void main(String[] args) {
