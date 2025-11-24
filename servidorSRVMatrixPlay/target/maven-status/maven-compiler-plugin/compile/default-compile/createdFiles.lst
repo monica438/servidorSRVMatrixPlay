@@ -6,4 +6,5 @@ com\project\Main.class
 com\project\moveHandler.class
 com\project\GestioDB.class
 com\project\GameObject.class
+com\project\bolaHandler.class
 com\project\ClientData.class
