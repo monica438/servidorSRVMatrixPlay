@@ -44,19 +44,48 @@ public class CrearClientHandler {
         }
 
         // Comprova que el nom no estigui en ús
-        if (clients.isNameTaken(userName)) {    
+        if (clients.isNameTaken(userName)) {
+            WebSocket oldConn = clients.socketByName(userName);
+            if (oldConn != null) {
+                System.out.println("[handleClientSetName] Usuario " + userName + " ya existe. Reemplazando sesión anterior.");
+                // Cerrar conexión anterior si está abierta
+                if (oldConn.isOpen()) {
+                    oldConn.close(1000, "Sesión reemplazada por nueva conexión");
+                }
+                // Eliminar del registro inmediatamente para permitir el nuevo registro
+                clients.remove(oldConn);
+                // IMPORTANTE: Eliminar también de clientsData para liberar el color
+                clientsData.remove(userName);
+            }
+        }
+
+        // Verificar si la partida está llena (máximo 2 jugadores)
+        if (clients.snapshot().size() >= 2) {
             JSONObject error = new JSONObject()
                 .put("type", "error")
-                .put("value", "Nom ja utilitzat. Tria un altre.");
+                .put("value", "Partida plena. Espera a que acabi.");
             serverUtils.sendSafe(conn, error.toString());
             conn.close();
-
             return;
         }
 
         clients.add(conn, userName);
 
-        String color = (clients.snapshot().size() == 1) ? "VERMELL" : "NEGRE";
+        // Asignar color basado en disponibilidad (orden de entrada/huecos libres)
+        String color = "RED";
+        boolean redTaken = false;
+        for (ClientData cd : clientsData.values()) {
+            if ("RED".equals(cd.color)) {
+                redTaken = true;
+                break;
+            }
+        }
+        
+        if (redTaken) {
+            color = "BLACK";
+        }
+        
+        System.out.println("[handleClientSetName] Asignando color " + color + " a " + userName);
 
         clientsData.put(userName, new ClientData(userName, color));
         JSONObject ok = new JSONObject()

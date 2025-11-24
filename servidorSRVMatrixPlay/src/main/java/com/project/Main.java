@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -22,8 +23,8 @@ public class Main extends WebSocketServer {
 
     public static final int DEFAULT_PORT = 3000;
 
-	private final Map<String, ClientData> clientsData = new HashMap<>();
-    private final Map<String, GameObject> gameObjects = new HashMap<>();
+	private final Map<String, ClientData> clientsData = new ConcurrentHashMap<>();
+    private final Map<String, GameObject> gameObjects = new ConcurrentHashMap<>();
     private volatile boolean countdownRunning = false;
     private static final String K_TYPE = "type";
     private static final String K_VALUE = "value";
@@ -132,7 +133,18 @@ public class Main extends WebSocketServer {
 
         JSONArray jugadors = new JSONArray();
         for (String name : clients.snapshot().values()) {
-            jugadors.put(name);
+            ClientData cd = clientsData.get(name);
+            if (cd != null) {
+                // Sincronizar datos del objeto de juego con ClientData antes de enviar
+                String objectName = cd.color.equals("RED") ? "P1" : "P2";
+                GameObject paddle = gameObjects.get(objectName);
+                if (paddle != null) {
+                    cd.palaX = paddle.x;
+                    cd.palaY = paddle.y;
+                }
+                cd.punts = cd.color.equals("RED") ? J1punts : J2Punts;
+                jugadors.put(cd.toJSON());
+            }
         }
         jocData.put("Jugadors", jugadors);
 
@@ -148,18 +160,18 @@ public class Main extends WebSocketServer {
 
 
             broadcast(jocData.toString());
-            System.out.println(jocData.toString(4));        
+            // System.out.println(jocData.toString(4)); // Reducir logs
     }
     
     private void handleMove(WebSocket conn, JSONObject obj) {
         String clientName = clients.nameBySocket(conn);
-        System.out.println("[handleMove] clientName=" + clientName + " direction=" + obj.optString("direction"));
+        // System.out.println("[handleMove] clientName=" + clientName + " direction=" + obj.optString("direction"));
         if (clientName == null) return;
 
         ClientData cd = clientsData.get(clientName);
         if (cd == null) return;
 
-        String objectName = cd.color.equals("VERMELL") ? "P1" : "P2";
+        String objectName = cd.color.equals("RED") ? "P1" : "P2";
         GameObject paddle = gameObjects.get(objectName);
         if (paddle == null) return;
 
@@ -182,14 +194,14 @@ public class Main extends WebSocketServer {
             paddle.y = HEIGHT - paddle.alto;
         }
 
-        System.out.println("[handleMove] " + objectName + " moved to y=" + paddle.y);
+        // System.out.println("[handleMove] " + objectName + " moved to y=" + paddle.y);
 
     }
 
     private void handlePosition(WebSocket conn, JSONObject obj) {
         String clientName = clients.nameBySocket(conn);
         int y = obj.optInt("y", -1);
-        System.out.println("[handlePosition] clientName=" + clientName + " y=" + y);
+        // System.out.println("[handlePosition] clientName=" + clientName + " y=" + y);
         
         if (clientName == null || y < 0) return;
 
@@ -197,7 +209,7 @@ public class Main extends WebSocketServer {
         if (cd == null) return;
 
         // Determinar qué pala mover según el color del jugador
-        String objectName = cd.color.equals("VERMELL") ? "P1" : "P2";
+        String objectName = cd.color.equals("RED") ? "P1" : "P2";
         GameObject paddle = gameObjects.get(objectName);
         if (paddle == null) return;
 
@@ -212,7 +224,7 @@ public class Main extends WebSocketServer {
             paddle.y = HEIGHT - paddle.alto;
         }
         
-        System.out.println("[handlePosition] " + objectName + " set to y=" + paddle.y);
+        // System.out.println("[handlePosition] " + objectName + " set to y=" + paddle.y);
     }
 
 
@@ -469,23 +481,23 @@ public class Main extends WebSocketServer {
 
         if (ultimJugadorGol == gameObjects.get("P1")) {
             guanyador = clientsData.entrySet().stream()
-                    .filter(e -> e.getValue().color.equals("VERMELL"))
+                    .filter(e -> e.getValue().color.equals("RED"))
                     .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
             perdedor = clientsData.entrySet().stream()
-                    .filter(e -> e.getValue().color.equals("NEGRE"))
+                    .filter(e -> e.getValue().color.equals("BLACK"))
                     .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
-            colorWinner = "VERMELL";
-            colorLoser = "NEGRE";
+            colorWinner = "RED";
+            colorLoser = "BLACK";
         } 
         else if (ultimJugadorGol == gameObjects.get("P2")) {
             guanyador = clientsData.entrySet().stream()
-                    .filter(e -> e.getValue().color.equals("NEGRE"))
+                    .filter(e -> e.getValue().color.equals("BLACK"))
                     .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
             perdedor = clientsData.entrySet().stream()
-                    .filter(e -> e.getValue().color.equals("VERMELL"))
+                    .filter(e -> e.getValue().color.equals("RED"))
                     .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
-            colorWinner = "NEGRE";
-            colorLoser = "VERMELL";
+            colorWinner = "BLACK";
+            colorLoser = "RED";
         }
 
         // --- Enviar GameOver ---
@@ -498,6 +510,11 @@ public class Main extends WebSocketServer {
         broadcast(msg.toString());
 
         System.out.println("Partida finalitzada! Guanyador: " + guanyador);
+
+        // Desconectar a todos los jugadores al finalizar la partida
+        for (WebSocket ws : clients.snapshot().keySet()) {
+             ws.close(1000, "Partida finalitzada");
+        }
 
         // --- Reset COMPLETO ---
         reiniciarPartida();

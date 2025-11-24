@@ -1,9 +1,8 @@
-/home/super/Documents/GitHub/Projecte1/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/GameObject.java
-/home/super/Documents/GitHub/Projecte1/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/ClientData.java
-/home/super/Documents/GitHub/Projecte1/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/Main.java
-/home/super/Documents/GitHub/Projecte1/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/ServerUtils.java
-/home/super/Documents/GitHub/Projecte1/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/ClientRegistry.java
-/home/super/Documents/GitHub/Projecte1/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/GestioDB.java
-/home/super/Documents/GitHub/Projecte1/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/moveHandler.java
-/home/super/Documents/GitHub/Projecte1/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/UtilsSQLite.java
-/home/super/Documents/GitHub/Projecte1/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/CrearClientHandler.java
+/home/reverssd/Documentos/GitHub/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/ClientRegistry.java
+/home/reverssd/Documentos/GitHub/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/GameObject.java
+/home/reverssd/Documentos/GitHub/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/ServerUtils.java
+/home/reverssd/Documentos/GitHub/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/UtilsSQLite.java
+/home/reverssd/Documentos/GitHub/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/GestioDB.java
+/home/reverssd/Documentos/GitHub/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/CrearClientHandler.java
+/home/reverssd/Documentos/GitHub/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/Main.java
+/home/reverssd/Documentos/GitHub/servidorSRVMatrixPlay/servidorSRVMatrixPlay/src/main/java/com/project/ClientData.java
