@@ -21,6 +21,11 @@ public class ClientData {
         this.punts = punts;
     }
 
+    
+    public String getColor() {
+        return color;
+    }
+
     @Override
     public String toString() {
         return this.toJSON().toString();
@@ -35,6 +40,7 @@ public class ClientData {
         obj.put("punts", punts);
         return obj;
     }
+
 
     public static ClientData fromJSON(JSONObject obj) {
         String name = obj.optString("name", "Unknown");

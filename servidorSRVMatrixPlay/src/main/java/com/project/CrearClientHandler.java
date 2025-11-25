@@ -33,7 +33,7 @@ public class CrearClientHandler {
     public void handleClientSetName(WebSocket conn, JSONObject obj) {
         System.out.println("[handleClientSetName] from " + conn.getRemoteSocketAddress() + " payload=" + obj.toString());
         String userName = obj.optString("value", "").trim();
-        // Comprova que el nom sigui vàlid
+
         if (userName.isEmpty()) {
             JSONObject error = new JSONObject()
                 .put("type", "error")
@@ -43,36 +43,42 @@ public class CrearClientHandler {
             return;
         }
 
-        // Comprova que el nom no estigui en ús
-        if (clients.isNameTaken(userName)) {    
+        if (clients.isNameTaken(userName)) {
             JSONObject error = new JSONObject()
                 .put("type", "error")
                 .put("value", "Nom ja utilitzat. Tria un altre.");
             serverUtils.sendSafe(conn, error.toString());
             conn.close();
-
             return;
         }
 
         clients.add(conn, userName);
 
-        String color = (clients.snapshot().size() == 1) ? "VERMELL" : "NEGRE";
+        // ---- SOLUCIÓ DEFINITIVA ----
+        boolean existeixVermell = clientsData.values().stream()
+                .anyMatch(d -> d.getColor().equals("VERMELL"));
+
+        String color = existeixVermell ? "NEGRE" : "VERMELL";
+        // -----------------------------
 
         clientsData.put(userName, new ClientData(userName, color));
+
         JSONObject ok = new JSONObject()
             .put("type", "RegistreOk")
             .put("value", "Benvingut " + userName + "!")
             .put("color", color)
-            .put("playerNumber", clients.snapshot().size()); 
+            .put("playerNumber", clients.snapshot().size());
         serverUtils.sendSafe(conn, ok.toString());
+
         try {
-            GestioDB.afegeixEntradaLog("Nou client connectat: " + userName + " (" + color + ")",LocalDate.now().toString());
+            GestioDB.afegeixEntradaLog("Nou client connectat: " + userName + " (" + color + ")", LocalDate.now().toString());
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        if (clients.snapshot().size() == 2) {  // REQUIRED_CLIENTS
-        server.sendCountdown();
+        if (clients.snapshot().size() == 2) {
+            server.sendCountdown();
+        }
     }
-    }
+
 }

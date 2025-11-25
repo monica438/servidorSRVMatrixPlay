@@ -365,8 +365,8 @@ public class Main extends WebSocketServer {
         ticker.scheduleAtFixedRate(() -> {
             try {
                 if (!clients.snapshot().isEmpty()) {
-                    if (partida.equals("Finalitzada")){
-                        return;
+                    if (partida.equals("Jugant")){
+                        broadcastStatus();
                     }
                     GameObject bola = gameObjects.get("B0");
                     GameObject p1 = gameObjects.get("P1");
@@ -406,9 +406,9 @@ public class Main extends WebSocketServer {
                             );
                             if (hitP2 != null) {
                                 bolaVelX *= -1;
-                                float paddleCenter = p1.y + p1.alto / 2f;
+                                float paddleCenter = p2.y + p2.alto / 2f;
                                 float relativeIntersectY = bola.y + bola.alto / 2f - paddleCenter;
-                                float normalizedRelativeIntersectionY = relativeIntersectY / (p1.alto / 2f);
+                                float normalizedRelativeIntersectionY = relativeIntersectY / (p2.alto / 2f);
                                 bolaVelY = (int)(normalizedRelativeIntersectionY * BOLA_SPEED);
                                 bola.x = (int) hitP2[0];
                                 bola.y = (int) hitP2[1];
@@ -467,28 +467,32 @@ public class Main extends WebSocketServer {
         String colorWinner = "";
         String colorLoser = "";
 
-        if (ultimJugadorGol == gameObjects.get("P1")) {
+        String colorGol = ultimJugadorGol.color; 
+
+        if (colorGol.equals("VERMELL")) {
             guanyador = clientsData.entrySet().stream()
                     .filter(e -> e.getValue().color.equals("VERMELL"))
                     .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
+
             perdedor = clientsData.entrySet().stream()
                     .filter(e -> e.getValue().color.equals("NEGRE"))
                     .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
+
             colorWinner = "VERMELL";
             colorLoser = "NEGRE";
-        } 
-        else if (ultimJugadorGol == gameObjects.get("P2")) {
+        } else {
             guanyador = clientsData.entrySet().stream()
                     .filter(e -> e.getValue().color.equals("NEGRE"))
                     .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
+
             perdedor = clientsData.entrySet().stream()
                     .filter(e -> e.getValue().color.equals("VERMELL"))
                     .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
+
             colorWinner = "NEGRE";
             colorLoser = "VERMELL";
         }
 
-        // --- Enviar GameOver ---
         JSONObject msg = new JSONObject();
         msg.put("type", "gameOver");
         msg.put("winner", guanyador);
@@ -499,9 +503,9 @@ public class Main extends WebSocketServer {
 
         System.out.println("Partida finalitzada! Guanyador: " + guanyador);
 
-        // --- Reset COMPLETO ---
         reiniciarPartida();
     }
+
 
 
     private void reiniciarBola() {
@@ -589,8 +593,15 @@ public class Main extends WebSocketServer {
             p2.y = 200;
         }
 
-        // Reset bola
+        // Reset bola (posición) y detener velocidad
         reiniciarBola();
+        bolaVelX = 0; // evita movimiento inmediato
+        bolaVelY = 0;
+
+        // Reset countdown flag para permitir nuevo conteo (opcional)
+        synchronized (this) {
+            countdownRunning = false;
+        }
 
         // Volver a estado inicial
         partida = "Esperant";
@@ -598,6 +609,7 @@ public class Main extends WebSocketServer {
         // Actualizar a clientes
         broadcastStatus();
     }
+
 
 
 	    /** Punt d'entrada. */

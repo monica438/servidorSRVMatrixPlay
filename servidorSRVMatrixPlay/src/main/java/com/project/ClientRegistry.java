@@ -1,114 +1,101 @@
 package com.project;
 
-// ------------------------------------------------------------------------------------------------------------------------------------------------
-// import com.shared.ClientData; // Cambiar porque esta carpeta estará en otro proyecto
-// ------------------------------------------------------------------------------------------------------------------------------------------------
-
 import org.java_websocket.WebSocket;
 import org.json.JSONArray;
 
-import java.util.Set; 
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Set;
+import java.util.LinkedHashMap;
+import java.util.Collections;
 
 /**
  * Registre de clients connectats usando nombres reales de usuarios.
  */
 final class ClientRegistry {
 
-    /** Mapa de sockets a nombres de usuario. */
-    private final Map<WebSocket, String> bySocket = new ConcurrentHashMap<>();
+    /** Mapa de sockets a nombres de usuario (orden de inserción garantizado). */
+    private final Map<WebSocket, String> bySocket =
+            Collections.synchronizedMap(new LinkedHashMap<>());
 
-    /** Mapa de nombres de usuario a sockets. */
-    private final Map<String, WebSocket> byName = new ConcurrentHashMap<>();
-
-
-// ------------------------------------------------------------------------------------------------------------------------------------------------
-    // Mapa per les dades dels clients en el joc
-    //private final Map<String, ClientData> clientsData = new ConcurrentHashMap<>();
-// ------------------------------------------------------------------------------------------------------------------------------------------------
+    /** Mapa de nombres de usuario a sockets (orden de inserción garantizado). */
+    private final Map<String, WebSocket> byName =
+            Collections.synchronizedMap(new LinkedHashMap<>());
 
     /**
-     * Crea un nuevo registro
+     * Constructor simple.
      */
     ClientRegistry() {
-        // Constructor simple
     }
 
     /**
      * Añade un nuevo cliente con su nombre
      */
     String add(WebSocket socket, String userName) {
-        bySocket.put(socket, userName);
-        byName.put(userName, socket);
-// ------------------------------------------------------------------------------------------------------------------------------------------------
-        // Creem dades del client
-        //clientsData.put(userName, new ClientData(userName, "none"));
-// ------------------------------------------------------------------------------------------------------------------------------------------------
-
-        return userName; // Devuelve el mismo nombre que recibió
+        synchronized (byName) {
+            bySocket.put(socket, userName);
+            byName.put(userName, socket);
+        }
+        return userName;
     }
-
-    // Devolver userNames
-    public Set<String> getAllUserNames() {
-        return byName.keySet();
-    }
-    
-// ------------------------------------------------------------------------------------------------------------------------------------------------
-    // Accedir a les dades dels clients
-    /* 
-    ClientData getClientData(String userName) {
-        return clientsData.get(userName);
-    }
-    */
-
-    /*
-    void updateClientData(String userName, ClientData data) {
-        clientsData.put(userName, data);
-    }
-    */
-
-// ------------------------------------------------------------------------------------------------------------------------------------------------
 
     /**
      * Verifica si un nombre ya está en uso
      */
     boolean isNameTaken(String userName) {
-        return byName.containsKey(userName);
+        synchronized (byName) {
+            return byName.containsKey(userName);
+        }
     }
 
     /**
      * Elimina un cliente del registro
      */
     String remove(WebSocket socket) {
-        String userName = bySocket.remove(socket);
-        if (userName != null) {
-            byName.remove(userName);
+        synchronized (byName) {
+            String userName = bySocket.remove(socket);
+            if (userName != null) {
+                byName.remove(userName);
+            }
+            return userName;
         }
-        return userName;
     }
 
     /**
      * Obtiene el socket asociado a un nombre de usuario
      */
     WebSocket socketByName(String userName) {
-        return byName.get(userName);
+        synchronized (byName) {
+            return byName.get(userName);
+        }
     }
 
     /**
      * Obtiene el nombre asociado a un socket
      */
     String nameBySocket(WebSocket socket) {
-        return bySocket.get(socket);
+        synchronized (byName) {
+            return bySocket.get(socket);
+        }
     }
 
     /**
-     * Retorna la lista actual de nombres de usuarios conectados
+     * Devuelve el conjunto de nombres de usuarios conectados (ordenado por llegada)
+     */
+    public Set<String> getAllUserNames() {
+        synchronized (byName) {
+            return Set.copyOf(byName.keySet());
+        }
+    }
+
+    /**
+     * Retorna la lista actual de nombres de usuarios conectados como JSONArray
      */
     JSONArray currentNames() {
         JSONArray arr = new JSONArray();
-        for (String userName : byName.keySet()) {
-            arr.put(userName);
+        synchronized (byName) {
+            for (String userName : byName.keySet()) {
+                arr.put(userName);
+            }
         }
         return arr;
     }
@@ -121,9 +108,12 @@ final class ClientRegistry {
     }
 
     /**
-     * Retorna una copia del mapa actual
+     * Retorna una copia del mapa actual de sockets → nombres
+     * (con orden de inserción garantizado)
      */
     Map<WebSocket, String> snapshot() {
-        return Map.copyOf(bySocket);
+        synchronized (byName) {
+            return Map.copyOf(bySocket);
+        }
     }
 }
