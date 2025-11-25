@@ -31,7 +31,7 @@ public class Main extends WebSocketServer {
     private int bolaVelY;
     private final int BOLA_SPEED = 5;
     private final Random rand = new Random();
-
+    private boolean golCountdown = false; 
 
     private static final String T_COUNTDOWN = "countdown";  
 	private final ClientRegistry clients;
@@ -331,8 +331,13 @@ public class Main extends WebSocketServer {
                     partida = nuevoValor;
                     break;
                 case "desconecta":
-                    clients.remove(conn);
-                    conn.close(1000,"Fi de partida");
+                    String clientName = clients.nameBySocket(conn);
+                    clients.remove(conn);                
+                    if (clientName != null) {
+                        clientsData.remove(clientName);   
+                    }
+                    conn.close(1000, "Fi de partida");
+
                 default:
                     break;
         }   
@@ -367,6 +372,9 @@ public class Main extends WebSocketServer {
                 if (!clients.snapshot().isEmpty()) {
                     if (partida.equals("Jugant")){
                         broadcastStatus();
+                    }
+                    if (golCountdown){
+                        return;
                     }
                     GameObject bola = gameObjects.get("B0");
                     GameObject p1 = gameObjects.get("P1");
@@ -431,17 +439,17 @@ public class Main extends WebSocketServer {
                         }
 
                         
-                        if (bola.x <= 0) {
+                        if (!golCountdown && bola.x <= 0) {
                             bola.x = 0;
                             J2Punts++;
                             ultimJugadorGol = p1;
-                            reiniciarBola();
+                            iniciarCooldownGol();
                         }
-                        if (bola.x >= 600 - bola.ancho) {
+                        if (!golCountdown && bola.x >= 600 - bola.ancho) {
                             bola.x = 600 - bola.ancho;
                             J1punts++;
                             ultimJugadorGol = p2;
-                            reiniciarBola();
+                            iniciarCooldownGol();
                             }
                         gestionarGols();
                     }
@@ -455,6 +463,20 @@ public class Main extends WebSocketServer {
     }
 
 
+    private void iniciarCooldownGol() {
+        golCountdown = true; 
+        broadcastStatus();
+        new Thread(() -> {
+            try {
+                Thread.sleep(3000); 
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            reiniciarBola();
+            golCountdown = false;
+        }, "GolCooldownThread").start();
+    }
+
 
 
     private void gestionarGols() {
@@ -462,14 +484,12 @@ public class Main extends WebSocketServer {
 
         partida = "Finalitzada";
 
-        String guanyador = "";
-        String perdedor = "";
-        String colorWinner = "";
-        String colorLoser = "";
+        String guanyador;
+        String perdedor;
+        String colorWinner;
+        String colorLoser;
 
-        String colorGol = ultimJugadorGol.color; 
-
-        if (colorGol.equals("VERMELL")) {
+        if (J1punts >= 3) {
             guanyador = clientsData.entrySet().stream()
                     .filter(e -> e.getValue().color.equals("VERMELL"))
                     .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
@@ -505,6 +525,7 @@ public class Main extends WebSocketServer {
 
         reiniciarPartida();
     }
+
 
 
 
