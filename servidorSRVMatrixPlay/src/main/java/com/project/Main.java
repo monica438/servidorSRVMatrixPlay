@@ -364,111 +364,103 @@ public class Main extends WebSocketServer {
         long periodMs = Math.max(1, 1000 / SEND_FPS);
         ticker.scheduleAtFixedRate(() -> {
             try {
-                if (!clients.snapshot().isEmpty()) {
-                    if (partida.equals("Jugant")){
-                        broadcastStatus();
-                    }
-                    if (golCountdown){
-                        return;
-                    }
-                    GameObject bola = gameObjects.get("B0");
-                    GameObject p1 = gameObjects.get("P1");
-                    GameObject p2 = gameObjects.get("P2");
+                if (clients.snapshot().isEmpty()) return;
 
-                    if (bola != null) {
-                        float nextX = bola.x + bolaVelX;
-                        float nextY = bola.y + bolaVelY;
+                broadcastStatus();
 
-                        if (p1 != null) {
-                            float[] hitP1 = ballIntersectsPaddle(
-                                bola.x, bola.y,
-                                nextX, nextY,
-                                p1.x, p1.y,
-                                p1.x, p1.y + p1.alto
-                            );
-                            if (hitP1 != null) {
-                                bolaVelX *= -1;
-                                float paddleCenter = p1.y + p1.alto / 2f;
-                                float relativeIntersectY = bola.y + bola.alto / 2f - paddleCenter;
-                                float normalizedRelativeIntersectionY = relativeIntersectY / (p1.alto / 2f);
-                                bolaVelY = (int)(normalizedRelativeIntersectionY * BOLA_SPEED);
-                                bola.x = (int) hitP1[0];
-                                bola.y = (int) hitP1[1];
-                                nextX = bola.x + bolaVelX;
-                                nextY = bola.y + bolaVelY;
-                            }
-                        }
+                if (!partida.equals("Jugant") || golCountdown) return;
 
-                        if (p2 != null) {
-                            float[] hitP2 = ballIntersectsPaddle(
-                                bola.x, bola.y,
-                                nextX, nextY,
-                                p2.x, p2.y,
-                                p2.x, p2.y + p2.alto
-                            );
-                            if (hitP2 != null) {
-                                bolaVelX *= -1;
-                                float paddleCenter = p2.y + p2.alto / 2f;
-                                float relativeIntersectY = bola.y + bola.alto / 2f - paddleCenter;
-                                float normalizedRelativeIntersectionY = relativeIntersectY / (p2.alto / 2f);
-                                bolaVelY = (int)(normalizedRelativeIntersectionY * BOLA_SPEED);
-                                bola.x = (int) hitP2[0];
-                                bola.y = (int) hitP2[1];
-                                nextX = bola.x + bolaVelX;
-                                nextY = bola.y + bolaVelY;
-                            }
-                        }
+                GameObject bola = gameObjects.get("B0");
+                GameObject p1 = gameObjects.get("P1");
+                GameObject p2 = gameObjects.get("P2");
 
-                        bola.x += bolaVelX;
-                        bola.y += bolaVelY;
+                if (bola == null || p1 == null || p2 == null) return;
 
-                        if (bola.y <= 0) {
-                            bola.y = 0;
-                            bolaVelY *= -1;
-                        }
-                            
-                        if (bola.y >= HEIGHT - bola.alto) {
-                            bola.y = HEIGHT - bola.alto;
-                            bolaVelY *= -1;
-                        }
+                float nextX = bola.x + bolaVelX;
+                float nextY = bola.y + bolaVelY;
 
-                        
-                        if (!golCountdown && bola.x <= 0) {
-                            bola.x = 0;
-                            J2Punts++;
-                            ultimJugadorGol = p2;
-                            String nomJugadorGol = clientsData.entrySet().stream()
-                                    .filter(e -> e.getValue().color.equals("NEGRE"))
-                                    .map(Map.Entry::getKey)
-                                    .findFirst()
-                                    .orElse("Desconegut");
-                            GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, LocalDate.now().toString());
-
-                            iniciarCooldownGol();
-                        }
-                        if (!golCountdown && bola.x >= 600 - bola.ancho) {
-                            bola.x = 600 - bola.ancho;
-                            J1punts++;
-                            ultimJugadorGol = p1;
-                            String nomJugadorGol = clientsData.entrySet().stream()
-                                    .filter(e -> e.getValue().color.equals("VERMELL"))
-                                    .map(Map.Entry::getKey)
-                                    .findFirst()
-                                    .orElse("Desconegut");
-                            GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, LocalDate.now().toString());
-
-                            iniciarCooldownGol();
-                        }
-                        gestionarGols();
-                    }
-
-                    broadcastStatus();
+                float[] hitP1 = ballIntersectsPaddle(
+                    bola.x, bola.y,
+                    nextX, nextY,
+                    p1.x, p1.y,
+                    p1.x, p1.y + p1.alto
+                );
+                if (hitP1 != null) {
+                    bolaVelX *= -1;
+                    float paddleCenter = p1.y + p1.alto / 2f;
+                    float relativeIntersectY = bola.y + bola.alto / 2f - paddleCenter;
+                    float normalizedRelativeIntersectionY = relativeIntersectY / (p1.alto / 2f);
+                    bolaVelY = (int)(normalizedRelativeIntersectionY * BOLA_SPEED);
+                    bola.x = (int) hitP1[0];
+                    bola.y = (int) hitP1[1];
+                    nextX = bola.x + bolaVelX;
+                    nextY = bola.y + bolaVelY;
                 }
+
+                float[] hitP2 = ballIntersectsPaddle(
+                    bola.x, bola.y,
+                    nextX, nextY,
+                    p2.x, p2.y,
+                    p2.x, p2.y + p2.alto
+                );
+                if (hitP2 != null) {
+                    bolaVelX *= -1;
+                    float paddleCenter = p2.y + p2.alto / 2f;
+                    float relativeIntersectY = bola.y + bola.alto / 2f - paddleCenter;
+                    float normalizedRelativeIntersectionY = relativeIntersectY / (p2.alto / 2f);
+                    bolaVelY = (int)(normalizedRelativeIntersectionY * BOLA_SPEED);
+                    bola.x = (int) hitP2[0];
+                    bola.y = (int) hitP2[1];
+                    nextX = bola.x + bolaVelX;
+                    nextY = bola.y + bolaVelY;
+                }
+
+                bola.x += bolaVelX;
+                bola.y += bolaVelY;
+
+                if (bola.y <= 0) {
+                    bola.y = 0;
+                    bolaVelY *= -1;
+                }
+                if (bola.y >= HEIGHT - bola.alto) {
+                    bola.y = HEIGHT - bola.alto;
+                    bolaVelY *= -1;
+                }
+
+                if (!golCountdown && bola.x <= 0) {
+                    bola.x = 0;
+                    J2Punts++;
+                    ultimJugadorGol = p2;
+                    String nomJugadorGol = clientsData.entrySet().stream()
+                            .filter(e -> e.getValue().color.equals("NEGRE"))
+                            .map(Map.Entry::getKey)
+                            .findFirst()
+                            .orElse("Desconegut");
+                    GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, LocalDate.now().toString());
+                    iniciarCooldownGol();
+                }
+
+                if (!golCountdown && bola.x >= WIDTH - bola.ancho) {
+                    bola.x = WIDTH - bola.ancho;
+                    J1punts++;
+                    ultimJugadorGol = p1;
+                    String nomJugadorGol = clientsData.entrySet().stream()
+                            .filter(e -> e.getValue().color.equals("VERMELL"))
+                            .map(Map.Entry::getKey)
+                            .findFirst()
+                            .orElse("Desconegut");
+                    GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, LocalDate.now().toString());
+                    iniciarCooldownGol();
+                }
+
+                gestionarGols();
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }, 0, periodMs, TimeUnit.MILLISECONDS);
     }
+
 
 
     private void iniciarCooldownGol() {
@@ -536,7 +528,6 @@ public class Main extends WebSocketServer {
             e.printStackTrace();
         }
 
-        reiniciarPartida();
     }
 
 
