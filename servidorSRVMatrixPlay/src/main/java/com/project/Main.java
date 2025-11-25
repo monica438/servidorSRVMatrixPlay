@@ -92,10 +92,8 @@ public class Main extends WebSocketServer {
         clientsData.remove(name);
         System.out.println("Client desconnectat: " + name);
 
-        // Reiniciar la partida siempre que un cliente se desconecte
         reiniciarPartida();
 
-        // Opcional: si quieres iniciar la cuenta atrás solo cuando vuelvan suficientes jugadores
         if (clients.snapshot().size() == REQUIRED_CLIENTS) {
             sendCountdown();
         }
@@ -110,7 +108,7 @@ public class Main extends WebSocketServer {
             GestioDB.afegeixEntradaLog("Raspberry connectada",LocalDate.now().toString());
             
         } catch (Exception e) {
-            // TODO: handle exception
+            e.printStackTrace();
         }
 		JSONObject hola = new JSONObject();
 		hola.put(K_TYPE, "broadcastHola");
@@ -148,7 +146,7 @@ public class Main extends WebSocketServer {
 
 
             broadcast(jocData.toString());
-            System.out.println(jocData.toString(4));        
+            //System.out.println(jocData.toString(4));        
     }
     
     private void handleMove(WebSocket conn, JSONObject obj) {
@@ -196,15 +194,12 @@ public class Main extends WebSocketServer {
         ClientData cd = clientsData.get(clientName);
         if (cd == null) return;
 
-        // Determinar qué pala mover según el color del jugador
         String objectName = cd.color.equals("VERMELL") ? "P1" : "P2";
         GameObject paddle = gameObjects.get(objectName);
         if (paddle == null) return;
 
-        // Actualizar posición directamente
         paddle.y = y;
 
-        // Limitar a los bordes del canvas
         if (paddle.y < 0) {
             paddle.y = 0;
         }
@@ -384,7 +379,6 @@ public class Main extends WebSocketServer {
                         float nextX = bola.x + bolaVelX;
                         float nextY = bola.y + bolaVelY;
 
-                        // Colisión con P1
                         if (p1 != null) {
                             float[] hitP1 = ballIntersectsPaddle(
                                 bola.x, bola.y,
@@ -442,15 +436,29 @@ public class Main extends WebSocketServer {
                         if (!golCountdown && bola.x <= 0) {
                             bola.x = 0;
                             J2Punts++;
-                            ultimJugadorGol = p1;
+                            ultimJugadorGol = p2;
+                            String nomJugadorGol = clientsData.entrySet().stream()
+                                    .filter(e -> e.getValue().color.equals("NEGRE"))
+                                    .map(Map.Entry::getKey)
+                                    .findFirst()
+                                    .orElse("Desconegut");
+                            GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, LocalDate.now().toString());
+
                             iniciarCooldownGol();
                         }
                         if (!golCountdown && bola.x >= 600 - bola.ancho) {
                             bola.x = 600 - bola.ancho;
                             J1punts++;
-                            ultimJugadorGol = p2;
+                            ultimJugadorGol = p1;
+                            String nomJugadorGol = clientsData.entrySet().stream()
+                                    .filter(e -> e.getValue().color.equals("VERMELL"))
+                                    .map(Map.Entry::getKey)
+                                    .findFirst()
+                                    .orElse("Desconegut");
+                            GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, LocalDate.now().toString());
+
                             iniciarCooldownGol();
-                            }
+                        }
                         gestionarGols();
                     }
 
@@ -521,7 +529,12 @@ public class Main extends WebSocketServer {
         msg.put("colorLoser", colorLoser);
         broadcast(msg.toString());
 
-        System.out.println("Partida finalitzada! Guanyador: " + guanyador);
+        try {
+            GestioDB.afegeixEntradaLog("Partida finalitzada! Ha guanyat en" + guanyador ,LocalDate.now().toString());
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         reiniciarPartida();
     }
@@ -594,40 +607,26 @@ public class Main extends WebSocketServer {
 
 
     public void reiniciarPartida() {
-        // Reset puntuaciones
         J1punts = 0;
         J2Punts = 0;
-
-        // Reset jugador del último gol
         ultimJugadorGol = null;
-
-        // Reset palas
         GameObject p1 = gameObjects.get("P1");
         if (p1 != null) {
             p1.x = 20;
             p1.y = 170;
         }
-
         GameObject p2 = gameObjects.get("P2");
         if (p2 != null) {
             p2.x = 570;
             p2.y = 200;
         }
-
-        // Reset bola (posición) y detener velocidad
         reiniciarBola();
-        bolaVelX = 0; // evita movimiento inmediato
+        bolaVelX = 0; 
         bolaVelY = 0;
-
-        // Reset countdown flag para permitir nuevo conteo (opcional)
         synchronized (this) {
             countdownRunning = false;
         }
-
-        // Volver a estado inicial
         partida = "Esperant";
-
-        // Actualizar a clientes
         broadcastStatus();
     }
 
