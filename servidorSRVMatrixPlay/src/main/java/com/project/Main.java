@@ -69,6 +69,9 @@ public class Main extends WebSocketServer {
         initializeGameObjects();
 
     }
+    public String horaActual() {
+    return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
 	@Override
 	public void onStart() {
 		System.out.println("Server started!");
@@ -110,7 +113,7 @@ public class Main extends WebSocketServer {
         String name = clients.remove(conn);
         clientsData.remove(name);
         try {
-            GestioDB.afegeixEntradaLog("Client desconnectat: ",dataHora);
+            GestioDB.afegeixEntradaLog("Client desconnectat: ",horaActual());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -320,7 +323,7 @@ public class Main extends WebSocketServer {
                     break;
                 case "raspberry":
                     try {
-                        GestioDB.afegeixEntradaLog("Raspberry connectada",dataHora);
+                        GestioDB.afegeixEntradaLog("Raspberry connectada",horaActual());
 
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -467,7 +470,7 @@ public class Main extends WebSocketServer {
                             .map(Map.Entry::getKey)
                             .findFirst()
                             .orElse("Desconegut");
-                    GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, dataHora);
+                    GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, horaActual());
                     iniciarCooldownGol();
                 }
 
@@ -480,7 +483,7 @@ public class Main extends WebSocketServer {
                             .map(Map.Entry::getKey)
                             .findFirst()
                             .orElse("Desconegut");
-                    GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, dataHora);
+                    GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, horaActual());
                     iniciarCooldownGol();
                 }
 
@@ -553,7 +556,7 @@ public class Main extends WebSocketServer {
         broadcast(msg.toString());
 
         try {
-            GestioDB.afegeixEntradaLog("Partida finalitzada! Ha guanyat en: " + guanyador ,dataHora);
+            GestioDB.afegeixEntradaLog("Partida finalitzada! Ha guanyat en: " + guanyador ,horaActual());
             
         } catch (Exception e) {
             e.printStackTrace();

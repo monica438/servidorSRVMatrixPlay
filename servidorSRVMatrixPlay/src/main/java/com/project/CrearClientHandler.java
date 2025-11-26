@@ -1,7 +1,6 @@
 package com.project;
 
 import java.sql.SQLException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -26,6 +25,9 @@ public class CrearClientHandler {
         this.clientsData = clientsData;
         this.server = server;
         this.serverUtils = serverUtils;
+    }
+    public String horaActual() {
+    return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 
     /**
@@ -71,7 +73,7 @@ public class CrearClientHandler {
         serverUtils.sendSafe(conn, ok.toString());
 
         try {
-            GestioDB.afegeixEntradaLog("Nou client connectat: " + userName + " (" + color + ")", dataHora);
+            GestioDB.afegeixEntradaLog("Nou client connectat: " + userName + " (" + color + ")", horaActual());
         } catch (SQLException e) {
             e.printStackTrace();
         }
