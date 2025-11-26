@@ -125,29 +125,45 @@ public class Main extends WebSocketServer {
 
     private void broadcastStatus() {
         JSONObject jocData = new JSONObject();
-        jocData.put(K_TYPE, "jocData");
+        jocData.put("type", "jocData");
         jocData.put("estatPartida", partida);
 
-        JSONArray jugadors = new JSONArray();
-        for (String name : clients.snapshot().values()) {
-            jugadors.put(name);
-        }
-        jocData.put("Jugadors", jugadors);
+        // Obtener nombres por color de forma determinista
+        String nomVermell = clientsData.entrySet().stream()
+                .filter(e -> "VERMELL".equals(e.getValue().color))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
 
+        String nomNegre = clientsData.entrySet().stream()
+                .filter(e -> "NEGRE".equals(e.getValue().color))
+                .map(Map.Entry::getKey)
+                .findFirst()
+                .orElse(null);
+
+        // Array de Jugadors ordenado y también campos explícitos
+        JSONArray jugadors = new JSONArray();
+        if (nomVermell != null) jugadors.put(nomVermell);
+        if (nomNegre != null) jugadors.put(nomNegre);
+
+        jocData.put("Jugadors", jugadors);
+        jocData.put("J1Name", nomVermell);
+        jocData.put("J2Name", nomNegre);
+
+        // Puntos (sin cambios)
         jocData.put("J1Punts", J1punts);
         jocData.put("J2Punts", J2Punts);
 
-
+        // Objetos del juego
         JSONArray arrObjects = new JSONArray();
         for (GameObject obj : gameObjects.values()) {
             arrObjects.put(obj.toJSON());
         }
         jocData.put("objectsList", arrObjects);
 
-
-            broadcast(jocData.toString());
-            //System.out.println(jocData.toString(4));        
+        broadcast(jocData.toString());
     }
+
     
     private void handleMove(WebSocket conn, JSONObject obj) {
         String clientName = clients.nameBySocket(conn);
@@ -522,16 +538,13 @@ public class Main extends WebSocketServer {
         broadcast(msg.toString());
 
         try {
-            GestioDB.afegeixEntradaLog("Partida finalitzada! Ha guanyat en" + guanyador ,LocalDate.now().toString());
+            GestioDB.afegeixEntradaLog("Partida finalitzada! Ha guanyat en: " + guanyador ,LocalDate.now().toString());
             
         } catch (Exception e) {
             e.printStackTrace();
         }
 
     }
-
-
-
 
     private void reiniciarBola() {
         GameObject bola = gameObjects.get("B0");
