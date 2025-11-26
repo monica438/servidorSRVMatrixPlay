@@ -132,7 +132,7 @@ public class Main extends WebSocketServer {
 		JSONObject hola = new JSONObject();
 		hola.put(K_TYPE, "broadcastHola");
 		hola.put(K_VALUE, "hola");
-		broadcast(hola.toString());
+		//broadcast(hola.toString());
         sendCountdown();
 
 	}
