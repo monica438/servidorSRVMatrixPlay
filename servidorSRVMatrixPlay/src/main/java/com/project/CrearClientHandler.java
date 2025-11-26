@@ -2,6 +2,8 @@ package com.project;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 import org.java_websocket.WebSocket;
@@ -16,6 +18,7 @@ public class CrearClientHandler {
     private final Map<String, ClientData> clientsData;
     private final Main server;
     private final ServerUtils serverUtils;
+    String dataHora = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
     public CrearClientHandler(ClientRegistry clients, Map<String, ClientData> clientsData,
                               Main server, ServerUtils serverUtils) {
@@ -53,13 +56,10 @@ public class CrearClientHandler {
         }
 
         clients.add(conn, userName);
-
-        // ---- SOLUCIÓ DEFINITIVA ----
         boolean existeixVermell = clientsData.values().stream()
                 .anyMatch(d -> d.getColor().equals("VERMELL"));
 
         String color = existeixVermell ? "NEGRE" : "VERMELL";
-        // -----------------------------
 
         clientsData.put(userName, new ClientData(userName, color));
 
@@ -71,7 +71,7 @@ public class CrearClientHandler {
         serverUtils.sendSafe(conn, ok.toString());
 
         try {
-            GestioDB.afegeixEntradaLog("Nou client connectat: " + userName + " (" + color + ")", LocalDate.now().toString());
+            GestioDB.afegeixEntradaLog("Nou client connectat: " + userName + " (" + color + ")", dataHora);
         } catch (SQLException e) {
             e.printStackTrace();
         }

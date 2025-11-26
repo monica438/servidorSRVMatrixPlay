@@ -1,10 +1,14 @@
 package com.project;
 
+import java.io.FileReader;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -32,7 +36,8 @@ public class Main extends WebSocketServer {
     private final int BOLA_SPEED = 5;
     private final Random rand = new Random();
     private boolean golCountdown = false; 
-
+    String dataHora = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    private int maxGols;
     private static final String T_COUNTDOWN = "countdown";  
 	private final ClientRegistry clients;
     private final CrearClientHandler crearClientHandler;
@@ -52,13 +57,14 @@ public class Main extends WebSocketServer {
         super(address);
         this.clients = new ClientRegistry();
         serverUtils = new ServerUtils(this, clients, clientsData);
-
+        maxGols = ObtenirGols();
         crearClientHandler = new CrearClientHandler(clients,clientsData,this,serverUtils);
             ThreadFactory tf = r -> {
             Thread t = new Thread(r, "ServerTicker");
             t.setDaemon(true);
             return t;
         };
+
         this.ticker = Executors.newSingleThreadScheduledExecutor(tf);
         initializeGameObjects();
 
@@ -79,6 +85,19 @@ public class Main extends WebSocketServer {
         startTicker();
 	}
 
+
+    private int ObtenirGols(){
+        try {
+            String content = Files.readString(Path.of("dades/config.json"));
+            JSONObject obj = new JSONObject(content);
+            int gols = obj.getInt("gols");
+            return gols;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
     private void initializeGameObjects() {
             gameObjects.put("P1", new GameObject("P1", 20, 170, 15, 100, "RED"));   
             gameObjects.put("P2", new GameObject("P2", 570, 200, 15, 100, "BLACK")); 
@@ -90,8 +109,11 @@ public class Main extends WebSocketServer {
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         String name = clients.remove(conn);
         clientsData.remove(name);
-        System.out.println("Client desconnectat: " + name);
-
+        try {
+            GestioDB.afegeixEntradaLog("Client desconnectat: ",dataHora);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         reiniciarPartida();
 
         if (clients.snapshot().size() == REQUIRED_CLIENTS) {
@@ -104,12 +126,6 @@ public class Main extends WebSocketServer {
 	@Override
 	public void onOpen(WebSocket conn, ClientHandshake handshake) {
 		System.out.println("New connection established!");
-        try {
-            GestioDB.afegeixEntradaLog("Raspberry connectada",LocalDate.now().toString());
-            
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 		JSONObject hola = new JSONObject();
 		hola.put(K_TYPE, "broadcastHola");
 		hola.put(K_VALUE, "hola");
@@ -128,7 +144,6 @@ public class Main extends WebSocketServer {
         jocData.put("type", "jocData");
         jocData.put("estatPartida", partida);
 
-        // Obtener nombres por color de forma determinista
         String nomVermell = clientsData.entrySet().stream()
                 .filter(e -> "VERMELL".equals(e.getValue().color))
                 .map(Map.Entry::getKey)
@@ -141,7 +156,6 @@ public class Main extends WebSocketServer {
                 .findFirst()
                 .orElse(null);
 
-        // Array de Jugadors ordenado y también campos explícitos
         JSONArray jugadors = new JSONArray();
         if (nomVermell != null) jugadors.put(nomVermell);
         if (nomNegre != null) jugadors.put(nomNegre);
@@ -150,11 +164,9 @@ public class Main extends WebSocketServer {
         jocData.put("J1Name", nomVermell);
         jocData.put("J2Name", nomNegre);
 
-        // Puntos (sin cambios)
         jocData.put("J1Punts", J1punts);
         jocData.put("J2Punts", J2Punts);
 
-        // Objetos del juego
         JSONArray arrObjects = new JSONArray();
         for (GameObject obj : gameObjects.values()) {
             arrObjects.put(obj.toJSON());
@@ -168,6 +180,7 @@ public class Main extends WebSocketServer {
     private void handleMove(WebSocket conn, JSONObject obj) {
         String clientName = clients.nameBySocket(conn);
         System.out.println("[handleMove] clientName=" + clientName + " direction=" + obj.optString("direction"));
+        if (golCountdown) return;
         if (clientName == null) return;
 
         ClientData cd = clientsData.get(clientName);
@@ -204,7 +217,8 @@ public class Main extends WebSocketServer {
         String clientName = clients.nameBySocket(conn);
         int y = obj.optInt("y", -1);
         System.out.println("[handlePosition] clientName=" + clientName + " y=" + y);
-        
+        if (golCountdown) return;
+
         if (clientName == null || y < 0) return;
 
         ClientData cd = clientsData.get(clientName);
@@ -286,12 +300,7 @@ public class Main extends WebSocketServer {
         JSONObject rst = msg(T_COUNTDOWN).put(K_VALUE, n);
         broadcast(rst.toString());
     }
-        private void broadcastExcept(WebSocket sender, String payload) {
-        for (Map.Entry<WebSocket, String> e : clients.snapshot().entrySet()) {
-            WebSocket conn = e.getKey();
-            if (!Objects.equals(conn, sender)) serverUtils.sendSafe(conn, payload);
-        }
-    }
+
 
 
     @Override
@@ -310,6 +319,12 @@ public class Main extends WebSocketServer {
                     crearClientHandler.handleClientSetName(conn, obj);
                     break;
                 case "raspberry":
+                    try {
+                        GestioDB.afegeixEntradaLog("Raspberry connectada",dataHora);
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     String requestMessage = obj.optString("message", "");
                     if ("solicito_config".equals(requestMessage)) {
                         JSONObject config = new JSONObject();
@@ -452,7 +467,7 @@ public class Main extends WebSocketServer {
                             .map(Map.Entry::getKey)
                             .findFirst()
                             .orElse("Desconegut");
-                    GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, LocalDate.now().toString());
+                    GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, dataHora);
                     iniciarCooldownGol();
                 }
 
@@ -465,7 +480,7 @@ public class Main extends WebSocketServer {
                             .map(Map.Entry::getKey)
                             .findFirst()
                             .orElse("Desconegut");
-                    GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, LocalDate.now().toString());
+                    GestioDB.afegeixEntradaLog("Ha marcat el: " + nomJugadorGol, dataHora);
                     iniciarCooldownGol();
                 }
 
@@ -496,7 +511,7 @@ public class Main extends WebSocketServer {
 
 
     private void gestionarGols() {
-        if (J1punts < 3 && J2Punts < 3) return;
+        if (J1punts < maxGols && J2Punts < maxGols) return;
 
         partida = "Finalitzada";
 
@@ -505,7 +520,7 @@ public class Main extends WebSocketServer {
         String colorWinner;
         String colorLoser;
 
-        if (J1punts >= 3) {
+        if (J1punts >= maxGols) {
             guanyador = clientsData.entrySet().stream()
                     .filter(e -> e.getValue().color.equals("VERMELL"))
                     .map(Map.Entry::getKey).findFirst().orElse("Desconegut");
@@ -538,7 +553,7 @@ public class Main extends WebSocketServer {
         broadcast(msg.toString());
 
         try {
-            GestioDB.afegeixEntradaLog("Partida finalitzada! Ha guanyat en: " + guanyador ,LocalDate.now().toString());
+            GestioDB.afegeixEntradaLog("Partida finalitzada! Ha guanyat en: " + guanyador ,dataHora);
             
         } catch (Exception e) {
             e.printStackTrace();
